@@ -28,7 +28,13 @@ REMINDER_CHANNEL_ID = 1544872377907683428
 # DATABASE
 # -----------------------------
 
-db = sqlite3.connect("assignments.db")
+DATABASE_PATH = os.path.join(
+    os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "."),
+    "assignments.db"
+)
+
+db = sqlite3.connect(DATABASE_PATH)
+
 cursor = db.cursor()
 
 # Create table if it doesn't already exist
