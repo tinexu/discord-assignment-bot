@@ -269,11 +269,6 @@ async def assignments(
 
 # -----------------------------
 # /deleteassignment
-# Delete an assignment
-# -----------------------------
-
-# -----------------------------
-# /deleteassignment
 # Delete one or multiple assignments
 # -----------------------------
 
