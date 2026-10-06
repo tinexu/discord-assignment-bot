@@ -272,56 +272,96 @@ async def assignments(
 # Delete an assignment
 # -----------------------------
 
+# -----------------------------
+# /deleteassignment
+# Delete one or multiple assignments
+# -----------------------------
+
 @bot.tree.command(
     name="deleteassignment",
-    description="Delete an assignment"
+    description="Delete one or multiple assignments"
 )
 @app_commands.describe(
-    assignment_id="The ID of the assignment to delete"
+    ids="Assignment IDs to delete, separated by commas (example: 2, 4, 7)"
 )
 async def deleteassignment(
     interaction: discord.Interaction,
-    assignment_id: int
+    ids: str
 ):
 
-    # Find assignment first
-    cursor.execute(
-        """
-        SELECT class_name, assignment
-        FROM assignments
-        WHERE id = ?
-        """,
-        (assignment_id,)
-    )
+    # Convert "2, 4, 7" into [2, 4, 7]
+    try:
+        assignment_ids = [
+            int(assignment_id.strip())
+            for assignment_id in ids.split(",")
+        ]
 
-    row = cursor.fetchone()
-
-    # Assignment doesn't exist
-    if row is None:
+    except ValueError:
         await interaction.response.send_message(
-            f"❌ Assignment #{assignment_id} doesn't exist.",
+            "❌ Invalid IDs.\n"
+            "Enter IDs separated by commas, like: `2, 4, 7`",
             ephemeral=True
         )
         return
 
-    class_name, assignment_name = row
+    deleted = []
+    not_found = []
 
-    # Delete it
-    cursor.execute(
-        """
-        DELETE FROM assignments
-        WHERE id = ?
-        """,
-        (assignment_id,)
-    )
+    for assignment_id in assignment_ids:
+
+        # Find the assignment
+        cursor.execute(
+            """
+            SELECT class_name, assignment
+            FROM assignments
+            WHERE id = ?
+            """,
+            (assignment_id,)
+        )
+
+        row = cursor.fetchone()
+
+        if row is None:
+            not_found.append(assignment_id)
+            continue
+
+        class_name, assignment_name = row
+
+        # Delete it
+        cursor.execute(
+            """
+            DELETE FROM assignments
+            WHERE id = ?
+            """,
+            (assignment_id,)
+        )
+
+        deleted.append(
+            f"**#{assignment_id}** — {class_name}: {assignment_name}"
+        )
 
     db.commit()
 
-    await interaction.response.send_message(
-        f"🗑️ **Assignment deleted!**\n\n"
-        f"📚 {class_name}\n"
-        f"📝 {assignment_name}"
-    )
+    message = ""
+
+    if deleted:
+        message += "🗑️ **Deleted:**\n"
+        message += "\n".join(deleted)
+
+    if not_found:
+        if message:
+            message += "\n\n"
+
+        missing_ids = ", ".join(
+            str(assignment_id)
+            for assignment_id in not_found
+        )
+
+        message += (
+            f"⚠️ **Not found:** {missing_ids}"
+        )
+
+    await interaction.response.send_message(message)
 
 
 # -----------------------------
